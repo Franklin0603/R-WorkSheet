@@ -1,0 +1,338 @@
+---
+title: "R Notebook"
+author: "Data Table Format"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output: 
+  html_document:
+      toc: TRUE
+      toc_float: TRUE
+---
+
+```{r include=FALSE}
+library(lattice)
+library(ggplot2)
+```
+
+
+# Dotplot groups on y-axis
+
+```{r include=FALSE}
+dat = structure(
+  list(
+    Commodity = structure(c(1L, 1L, 1L, 1L, 2L, 2L, 
+2L, 2L, 2L, 2L, 1L, 1L, 1L, 1L, 2L, 2L, 2L, 2L, 2L, 2L), 
+.Label = c("Coffee", 
+"Tea"), class = "factor"),
+rank = c(1L, 2L, 3L, 4L, 5L, 6L, 7L, 
+8L, 9L, 10L, 1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L, 10L),
+Country = structure(c(10L, 
+3L, 1L, 4L, 9L, 8L, 7L, 6L, 2L, 5L, 10L, 1L, 3L, 4L, 9L, 8L, 
+7L, 6L, 2L, 5L), 
+.Label = c("Brazil", "China", "Colombia", "Global Coffee", 
+"Global Tea", "India", "Kenya", "Sri Lanka", "Turkey", "Vietnam"
+), class = "factor"), 
+year = c(2010L, 2010L, 2010L, 2010L, 2010L, 
+2010L, 2010L, 2010L, 2010L, 2010L, 2009L, 2009L, 2009L, 2009L, 
+2009L, 2009L, 2009L, 2009L, 2009L, 2009L), 
+tonnes = c(0.55, 0.75, 
+1.3, 2.6, 0.2, 0.3, 0.4, 1, 1.6, 3.5, 0.6, 0.9, 0.9, 2.4, 0.1, 
+0.1, 0.5, 0.9, 1.7, 3.3)), 
+.Names = c("Commodity", "rank", "Country", 
+"year", "tonnes"), 
+class = "data.frame", 
+row.names = c(NA, -20L
+))
+```
+
+```{r}
+gg <- ggplot(data=dat, aes(x=tonnes, y=reorder(Country, rank)))
+gg <- gg + geom_point(aes(color=Commodity))
+gg <- gg + facet_wrap(~Commodity, ncol=1)
+gg <- gg + labs(y="", title="Production by country")
+gg <- gg + theme_bw()
+gg <- gg + theme(legend.position="none")
+gg <- gg + theme(panel.grid.major.x=element_blank())
+gg <- gg + theme(panel.grid.minor.x=element_blank())
+gg <- gg + theme(strip.background=element_blank())
+
+gg
+```
+
+# Diverging Bar Charts – Plotting Variance with ggplot2
+
+### Data manipulation for Mtcars
+reference: https://hutsons-hacks.info/diverging-bar-charts-plotting-variance-with-ggplot2
+```{r}
+mtcars_sample = mtcars
+
+mtcars_sample$CarBrand <- rownames(mtcars_sample) # Create new column for car brands and names
+
+# add a Z score calculation
+mtcars_sample$mpg_z_score <- round((mtcars_sample$mpg - mean(mtcars_sample$mpg))/sd(mtcars_sample$mpg), digits = 2)
+
+# Creating a cut off (above/below mean)
+mtcars_sample$mpg_type <- ifelse(mtcars_sample$mpg_z_score < 0, "below", "above")
+
+# Convert the car Brand into a unique factoe and to sort by the Z score 
+mtcars_sample <- mtcars_sample[order(mtcars_sample$mpg_z_score), ] #Ascending sort on Z Score
+mtcars_sample$CarBrand <- factor(mtcars_sample$CarBrand, levels = mtcars_sample$CarBrand)
+head(mtcars_sample)
+```
+
+
+### Creating the plot
+```{r}
+ggplot(mtcars_sample, aes(x = CarBrand, y= mpg_z_score, label=mpg_z_score)) +
+  geom_bar(stat = 'identity', aes(fill=mpg_type), width = .5) +
+  scale_fill_manual(name="Mileage (deviation)",
+                    labels = c("Above Average", "Below Average"),
+                    values = c("above"="#00ba38", "below"="#0b8fd3")) +
+  labs(subtitle="Z score (normalised) mileage for mtcars'",
+         title= "Diverging Bar Plot (ggplot2)", 
+       caption="Produced by Gary Hutson") +
+   coord_flip()+
+   theme_bw()
+```
+
+### Creating the dot plot (second) 
+```{r}
+ggplot(mtcars_sample, aes(x=CarBrand, y=mpg_z_score, label=mpg_z_score)) +
+  geom_point(stat='identity', aes(col=mpg_type), size=6) +
+  scale_color_manual(name="Mileage (deviation)",
+                     labels = c("Above Average", "Below Average"),
+                     values = c("above"="#00ba38", "below"="#0b8fd3")) +
+  geom_text(color="white", size=2) +
+  labs(title="Diverging Dot Plot (ggplot2)",
+       subtitle="Z score showing Normalised mileage", caption="Produced by Gary Hutson") +
+  ylim(-2.5, 2.5) +
+  coord_flip() +
+  theme_bw()
+```
+
+# Bar Charts
+
+
+reference: https://uc-r.github.io/barcharts
+```{r include=FALSE}
+#library(xlsx)           # for reading in Excel data
+library(dplyr)          # for data manipulation
+library(tidyr)          # for data manipulation
+library(magrittr)       # for easier syntax in one or two areas
+library(gridExtra)      # for generating some comparison plots
+library(ggplot2)        # for generating the visualizations
+```
+
+```{r}
+head(mtcars)
+```
+
+### Plot
+```{r}
+library(ggplot2)
+library(gridExtra)
+library(dplyr)
+
+avg_mpg <- mtcars %>%
+        group_by(cyl, am) %>%
+        summarise(mpg = mean(mpg, na.rm = TRUE))
+
+p1 <- ggplot(avg_mpg, aes(factor(cyl), mpg, fill = factor(am))) +
+        geom_bar(stat = "identity", position = position_dodge(width = .5)) +
+        ggtitle("Overlap of side-by-side bars") +
+        theme(legend.position = "none")
+
+p2 <- ggplot(avg_mpg, aes(factor(cyl), mpg, fill = factor(am)))+
+  geom_bar(stat = "identity", position = position_dodge(width = 1)) +
+  ggtitle("Spacing between side-by-side bars") +
+        labs(fill = "AM") +
+  theme(legend.position = c(1,1), 
+        legend.justification = c(1,1),
+        legend.background = element_blank())
+
+grid.arrange(p1, p2, ncol = 3)
+```
+
+### Plot 2
+```{r}
+# calculate percentages of each cyl & am category
+
+proportion <- 
+  mtcars %>%
+    group_by(cyl, am) %>%
+    tally() %>%
+    group_by(cyl) %>%
+    mutate(pct = n/sum(n))
+
+# create proportional stacked bars
+ggplot(proportion, aes(factor(cyl), pct, fill = factor(am, levels = c(1, 0)))) +
+        geom_bar(stat = "identity", color = "grey40") +
+        scale_fill_manual(values = c("#a1d99b", "#31a354")) +
+        labs(fill = "AM")
+```
+
+# Plot 3
+```{r}
+p1 <- ggplot(mtcars, aes(reorder(row.names(mtcars), mpg), mpg)) +
+        geom_bar(stat = "identity") +
+        coord_flip() +
+        geom_text(aes(label = mpg), nudge_y = 2)
+
+p2 <- ggplot(mtcars, aes(reorder(row.names(mtcars), mpg), mpg)) +
+        geom_bar(stat = "identity") +
+        coord_flip() +
+        geom_text(aes(label = mpg), nudge_y = -2, color = "white")
+
+grid.arrange(p1, p2, ncol = 2)
+```
+
+### Plot 4
+```{r}
+cars <-
+  mtcars %>%
+  mutate(Make = row.names(mtcars),
+         ID = ifelse(Make == "Fiat X1-9", TRUE, FALSE))
+
+ggplot(cars, aes(reorder(Make, mpg), mpg, fill = ID)) +
+        geom_bar(stat = "identity") +
+        coord_flip() +
+        scale_fill_manual(values = c("grey90", "dodgerblue")) +
+         annotate("text", x = "Fiat X1-9", y = 22, label = "mpg = 27.3", color = "white", size = 3) +
+  theme_bw()
+```
+
+### plot 5
+```{r}
+proportion <- proportion %>%
+                group_by(cyl) %>%
+                mutate(label_y = cumsum(pct))
+
+ggplot(proportion, aes(factor(cyl), pct, fill = factor(am, levels = c(1, 0)))) +
+        geom_bar(stat = "identity", color = "grey40") +
+        geom_text(aes(label = round(pct, 2), y = label_y), vjust = 1.5, color = "white") +
+        scale_fill_manual(values = c("#a1d99b", "#31a354")) +
+        labs(fill = "AM")
+```
+
+# Waterfall Chart
+
+```{r}
+library(ggplot2)
+library(waterfalls)
+
+category <- c("Sales", "Services", "Fixed Costs", 
+              "Variable Costs", "Taxes")
+amount <- c(101000, 52000, -23000, -15000, -10000)
+income <- data.frame(category, amount) 
+
+
+waterfall(income) 
+```
+
+```{r}
+# Create waterfall chart with total column 
+
+waterfall(income,
+          calc_total = TRUE,
+          total_axis_text = "Net",
+          total_rect_text_color = "black",
+          total_rect_color = "goldenrod1") +
+  scale_y_continuous(labels = scales::dollar) +
+  labs(title = "West Coast Profit and losses",
+       subtitle = "Year 2017",
+       y = "",
+       x = "") +
+  theme_minimal()
+```
+
+```{r}
+WaterfallData <- data.frame(
+          labels = c("Prev yr","jan","feb","mar",
+                      "apr","may","jun","jul","aug",
+                     "sep","oct","nov","dec","prent yr"), 
+         value = c(45,2,-18,-25,6,7.6,9.8,-6.8,-10,7.7,8.5,-16,5,15.8),
+          logic = c(TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,
+                    FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE))
+
+head(WaterfallData)
+```
+
+```{r}
+WaterfallData$labels <- factor(WaterfallData$labels, levels = WaterfallData$labels)
+WaterfallData$end <- cumsum(WaterfallData$value)
+WaterfallData$end <- c(head(WaterfallData$end, -1),0)
+WaterfallData$start <- c(0,head(WaterfallData$end, -1))
+WaterfallData$id <- seq_along(WaterfallData$value)
+
+WaterfallData$logic1 <- ifelse(WaterfallData$logic == "TRUE","TOTAL",
+                          ifelse(sign(WaterfallData$value) == 1,"UP","DOWN" ))
+(WaterfallData)
+```
+
+```{r}
+# https://github.com/vivekvix/R-Charts/blob/master/R_Plot/TopGear_RChart/Pie_Chart
+
+ggplot(WaterfallData, aes(value, fill = logic1)) + 
+  geom_rect(aes(x = labels,
+                xmin = id - 0.35,
+                xmax = id + 0.35,
+                ymin = end,
+                ymax = start)) +
+  ggtitle("WaterfallData Plot to showing financial data") +
+  geom_text(data = WaterfallData, 
+            aes(x = id, y = pmax(start, end)+2, label = value),
+            size = 4) +
+  theme(plot.title = element_text(hjust = 0.5),
+        legend.position = "none")
+```
+
+https://learnr.wordpress.com/2010/05/10/ggplot2-waterfall-charts/
+```{r}
+balance <- data.frame(
+              desc = c("Starting Cash","Sales",
+                       "Refunds", "Payouts", "Court Losses",
+                       "Court Wins", "Contracts", "End Cash"),
+              amount = c(2000,3400, -1100, -100, -6600, 3800, 1400, 2800))
+balance
+```
+
+```{r}
+balance$desc <- factor(balance$desc, levels = balance$desc)
+balance$id <- seq_along(balance$amount)
+balance$type <- ifelse(balance$amount > 0, "in", "out")
+
+balance
+```
+```{r}
+balance[balance$desc %in% c("Starting Cash", "End Cash"), "type" ] <- "net"
+
+balance
+```
+
+```{r}
+balance$end <- cumsum(balance$amount)
+balance$end <- c(head(balance$end,-1),0)
+balance$start <- c(0,head(balance$end,-1))
+
+balance <- balance[,c(3,1,4,6,5,2)]
+balance
+```
+
+```{r eval=FALSE, include=FALSE}
+ggplot(balance, aes(desc, fill = type)) +
+  geom_rect(aes(x = desc,
+                xmin = id - 0.45, 
+                xmax = id + 0.45, 
+                ymin = end,
+                ymax = start)) + 
+  geom_text(subset = .(type == "in"), aes(id,
+            end, label = comma(amount)), vjust = 1, size = 3) +
+  geom_text(subset = .(type == "out"), aes(id,
+         end, label = comma(amount)), vjust = -0.3,
+         size = 3) +
+  geom_text(data = subset(balance, type == "net" & id == min(id)),
+            aes(id, end, 
+                colour = type, 
+                label = comma(end), 
+                vjust = ifelse(end < start, 1, -0.3)), size = 3.5)
+```
+

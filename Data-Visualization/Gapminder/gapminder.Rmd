@@ -396,6 +396,9 @@ ggplot(df, aes(x = lifeExp, y = fct_rev(continent), fill = continent)) +
 
 ## Bar chart (vertical)
 
+
+
+
 ```{r}
 df <- gapminder %>%
       filter(year == 2007) %>%
@@ -542,6 +545,27 @@ ggplot(df, aes(x = gdpPercap, y = country)) +
 
 ```
 
+```{r}
+
+```
+
+```{r}
+
+data <- gapminder
+data$continent = as.character(data$continent)
+
+for (each_continent in unique(gapminder$continent) ){
+  
+  data2 <- data %>%
+    select(continent, country, lifeExp) %>%
+    arrange(desc(lifeExp)) %>%
+    filter(continent == each_continent) %>%
+    head() 
+  
+  print(data2)  
+}
+
+```
 
 
 # Sale Report General

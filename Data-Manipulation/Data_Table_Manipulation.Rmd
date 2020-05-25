@@ -1,0 +1,183 @@
+---
+title: "R Notebook"
+author: "Data Table Format"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output: 
+  html_document:
+      toc: TRUE
+      toc_float: TRUE
+---
+
+# Create the percentage in the datas
+
+### Finding percentage in a sub-group using group_by and summarise
+reference: https://stackoverflow.com/questions/29549731/finding-percentage-in-a-sub-group-using-group-by-and-summarise
+```{r include=FALSE}
+library(dplyr)
+```
+
+### Constract the data
+```{r}
+df <- data.frame(
+month=c("Feb-14", "Feb-14", "Feb-14", "Mar-14", "Mar-14", 
+        "Mar-14", "Apr-14", "Apr-14", "Apr-14", "May-14"),
+type=c("bbb", "ccc", "aaa", "bbb", "ccc", "aaa", "bbb", "ccc", "aaa", "bbb"),
+count=c(341, 527, 2674, 811, 1045, 4417, 1178, 1192, 4793, 916))
+
+df %>%
+  group_by(month) %>%
+  mutate(per = paste0(round(count/sum(count)*100,2),'%')) %>%
+  ungroup()
+```
+### data percentage of the data
+```{r}
+df %>%
+    group_by(month) %>%
+    mutate(countT= sum(count)) %>%
+    group_by(type, add=TRUE) %>%
+    mutate(per=paste0(round(100*count/countT,2),'%'))
+```
+
+# Calculate month on month change in R
+
+reference: https://stackoverflow.com/questions/38055475/calculate-month-on-month-change-in-r
+```{r}
+dt<-data.frame(c_name=c("ABC","ABC","ABC","DEF","DEF","DEF"), 
+               pmonth=c(201401,201402,201403,201401,201402,201403), 
+               spend=c(100,150,230,110,190,300))
+
+head(dt)
+```
+
+### data manpulation
+```{r}
+dt %>%
+  group_by(c_name) %>%
+  mutate(mom_change = c(NA, diff(spend)), 
+         mom_per_change = (spend - lag(spend))/lag(spend))
+```
+
+### Calculate Month-On-Month Change In Website Traffic 
+reference: https://analyticslog.com/blog/how-to-calculate-month-on-month-change-in-website-traffic-using-ggplot-in-r-studio
+```{r}
+gadata = data.frame(yearMonth=c(201801, 201802,201803,
+                                201804,201805, 201806,
+                                201807, 201808 ,201809), 
+                    sessions=c(145,126,202,224,214,248,255,286,264))
+gadata <- gadata %>%
+  mutate(yearMonth = as.factor(yearMonth))
+
+head(gadata)
+```
+
+```{r}
+# new column added using a calculated field 
+
+gadata <- gadata %>%
+            mutate(mom_per_change = (sessions - lag(sessions))/lag(sessions))
+head(gadata)
+```
+
+```{r}
+ggplot(gadata, mapping=aes(x=yearMonth, 
+  y=mom_per_change)) +
+  geom_col() +
+  scale_y_continuous(labels = scales::percent)
+```
+
+# dplyr filter() with SQL-like %wildcard%
+https://stackoverflow.com/questions/32829358/dplyr-filter-with-sql-like-wildcard
+```{r}
+library(dplyr)
+library(data.table)
+library(stringr)
+
+
+foo <- data.frame(Company = c("company1", "foo", "test", "food"), 
+                  Metric = rnorm(4, 10))
+
+head(foo)
+```
+
+```{r}
+foo %>% 
+  filter(str_detect(Company,"foo"))
+```
+```{r}
+foo %>% filter(str_detect(Company,"^f")) 
+```
+
+```{r}
+foo %>%
+  filter(Company %like% "foo")
+```
+
+# Identify and Remove Duplicate Data in R
+https://www.datanovia.com/en/lessons/identify-and-remove-duplicate-data-in-r/
+```{r}
+suppressWarnings(library(tidyverse))
+
+
+my_data = as_tibble(iris)
+head(my_data,3)
+```
+```{r}
+dim(my_data)
+```
+
+```{r}
+# Remove duplicates based on Sepal.Width columna
+Sepal.Width.Remove.duplicates <- my_data[!duplicated(my_data$Sepal.Width),]
+dim(Sepal.Width.Remove.duplicates)
+```
+
+```{r}
+# Remove duplicate rows based on Sepal.Length 
+my_data %>% distinct(Sepal.Length, .keep_all = TRUE)  %>% head()
+```
+```{r}
+# Remove duplicated rows based on 
+# Sepal.Length and Petal.width
+
+my_data %>% 
+  distinct(Sepal.Length, Petal.Width, .keep_all = TRUE) %>% head()
+```
+
+
+
+
+# How to suppress warning messages when loading a library?
+https://stackoverflow.com/questions/18931006/how-to-suppress-warning-messages-when-loading-a-library
+
+```{r}
+shhh <- suppressPackageStartupMessages 
+
+shhh(library(tidyverse))
+```
+
+# Subset of rows containing NA (missing) values in a chosen column of a data frame
+
+https://stackoverflow.com/questions/7980622/subset-of-rows-containing-na-missing-values-in-a-chosen-column-of-a-data-frame
+```{r}
+new_data <- data %>% filter_all(any_vars(is.na(.))) 
+
+```
+
+# Replace NA with Zero in dplyr without using list()
+https://stackoverflow.com/questions/49947592/replace-na-with-zero-in-dplyr-without-using-list
+```{r}
+library(dplyr)
+df <- tibble(x = c(1, 2, NA), 
+             y = c("a", NA, "b"), 
+             z = list(1:5, NULL, 10:20))
+df
+```
+```{r}
+df %>% 
+    replace_na(list(x = 0, y = "unknown"))
+```
+
+```{r}
+df$x[is.na(df$x)] <- 0
+```
+
