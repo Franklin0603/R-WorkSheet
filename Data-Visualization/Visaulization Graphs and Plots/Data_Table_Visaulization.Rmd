@@ -265,7 +265,7 @@ WaterfallData$id <- seq_along(WaterfallData$value)
 
 WaterfallData$logic1 <- ifelse(WaterfallData$logic == "TRUE","TOTAL",
                           ifelse(sign(WaterfallData$value) == 1,"UP","DOWN" ))
-(WaterfallData)
+head(WaterfallData,2)
 ```
 
 ```{r}
@@ -299,13 +299,12 @@ balance
 balance$desc <- factor(balance$desc, levels = balance$desc)
 balance$id <- seq_along(balance$amount)
 balance$type <- ifelse(balance$amount > 0, "in", "out")
-
-balance
+head(balance,2)
 ```
 ```{r}
 balance[balance$desc %in% c("Starting Cash", "End Cash"), "type" ] <- "net"
 
-balance
+head(balance,2)
 ```
 
 ```{r}
@@ -314,25 +313,516 @@ balance$end <- c(head(balance$end,-1),0)
 balance$start <- c(0,head(balance$end,-1))
 
 balance <- balance[,c(3,1,4,6,5,2)]
-balance
+head(balance,2)
 ```
 
-```{r eval=FALSE, include=FALSE}
-ggplot(balance, aes(desc, fill = type)) +
-  geom_rect(aes(x = desc,
-                xmin = id - 0.45, 
-                xmax = id + 0.45, 
-                ymin = end,
-                ymax = start)) + 
-  geom_text(subset = .(type == "in"), aes(id,
-            end, label = comma(amount)), vjust = 1, size = 3) +
-  geom_text(subset = .(type == "out"), aes(id,
-         end, label = comma(amount)), vjust = -0.3,
-         size = 3) +
-  geom_text(data = subset(balance, type == "net" & id == min(id)),
-            aes(id, end, 
-                colour = type, 
-                label = comma(end), 
-                vjust = ifelse(end < start, 1, -0.3)), size = 3.5)
+# Graph detective
+reference: https://livefreeordichotomize.com/2020/05/17/graph-detective/
+```{r}
+library(tidyverse)
+library(ggridges)
+
+d <- read_csv("https://github.com/nytimes/covid-19-data/raw/master/us-counties.csv")
+head(d,2)
+```
+
+
+```{r}
+d <- d %>%
+  filter(state == "Georgia",
+         county %in% c("Cobb","DeKalb","Fulton","Gwinnett", "Hall")) %>%
+         group_by(county) %>%
+         mutate(case = c(cases[1], diff(cases)))
+  
+d %>%
+  filter(date >= "2020-04-26", date <= "2020-05-09") %>%
+  mutate(
+     date = format(date, "%d%b%Y"),
+     date = factor(date,
+                  levels = c("28Apr2020", "27Apr2020", "29Apr2020",
+                             "01May2020", "30Apr2020", "04May2020",
+                             "06May2020", "05May2020", "02May2020",
+                             "07May2020", "26Apr2020", "03May2020",
+                             "08May2020", "09May2020"))) %>%
+ group_by(date) %>%
+ mutate(rank = rank(-case, ties = "first")) %>%
+ ggplot(aes(x = date, y = case, group = rank, fill = county)) +
+  geom_col(position = position_dodge()) +
+  scale_x_discrete(guide = guide_axis(n.dodge = 2)) +
+  scale_fill_manual("County",
+                    values = c("#5854A8", "#46868E", "#958648",
+                               "#8F5D37", "#5D98DB"),
+                    guide = guide_legend(title.position = "top", title.hjust = 0.5))+
+  ggtitle(
+    "Top 5 Counties with the Greatest Number of Confirmed COVID-19 Cases",
+    subtitle = "The chart below represents the most impacted counties over the past 15 days and the number of cases over time.") +
+  theme_classic() +
+  theme(legend.position = "top", 
+         panel.background = element_rect(fill = "#182F4E"),
+         plot.background = element_rect(fill = "#182F4E"),
+         axis.line = element_line(color = "white"),
+         axis.text = element_text(color = "white"),
+         axis.title = element_text(color = "white"),
+         legend.background = element_rect(fill = "#182F4E"),
+         legend.text = element_text(color = "white"),
+         legend.title = element_text(color = "white"),
+         title = element_text(color = "white"),
+         panel.grid.major.y = element_line(color = "white", size = 0.2, linetype = "dotted" ))
+    
+
+  
+```
+
+```{r}
+ d %>%
+  filter(date >= "2020-04-26", date <= "2020-05-09") %>%
+  mutate(
+    date = format(date, "%d%b%Y"),
+    date = factor(date,
+                  levels = c("02May2020", "06May2020", "04May2020",
+                             "01May2020", "27Apr2020", "29Apr2020",
+                             "28Apr2020", "05May2020", "08May2020",
+                             "30Apr2020", "09May2020", "03May2020",
+                             "07May2020", "26Apr2020"))) %>%
+  group_by(date) %>%
+  mutate(rank = rank(-case, ties = "first")) %>%
+  ggplot(aes(x = date, y = case, group = rank, fill = county)) +
+  geom_col(position = position_dodge()) +
+  scale_x_discrete(guide = guide_axis(n.dodge = 2)) +
+  scale_fill_manual("County",
+                    values = c("#5854A8", "#46868E", "#958648",
+                               "#8F5D37", "#5D98DB"),
+                    guide =  guide_legend(title.position = "top",
+                                          title.hjust = 0.5)) +
+  ggtitle(
+    "Top 5 Counties with the Greatest Number of Confirmed COVID-19 Cases",
+    subtitle = "The chart below represents the most impacted counties over the past 15 days and \n the number of cases over time.") +
+  theme_classic() +
+  theme(legend.position = "top",
+        panel.background = element_rect(fill = "#182F4E"),
+        plot.background = element_rect(fill = "#182F4E"),
+        axis.line = element_line(color = "white"),
+        axis.text = element_text(color = "white"),
+        axis.title = element_text(color = "white"),
+        legend.background = element_rect(fill = "#182F4E"),
+        legend.text = element_text(color = "white"),
+        legend.title = element_text(color = "white"),
+        title = element_text(color = "white"),
+        panel.grid.major.y = element_line(color = "white",
+                                          size = 0.25,
+                                          linetype = "dotted" ))
+
+```
+
+```{r}
+d %>%
+  filter(date >= "2020-04-26", date <= "2020-05-09") %>%
+  ggplot(aes(x = date, y = case, group = county, fill = county)) +
+  geom_col(position = "identity", alpha = 0.75) + 
+  scale_x_date(date_labels = "%d%b%Y", date_breaks = "2 days") +
+  scale_fill_manual("County",
+                    values = c("#5854A8", "#46868E", "#958648",
+                               "#8F5D37", "#5D98DB"),
+                    guide = guide_legend(title.position = "top",
+                                         title.hjust = 0.5)) + 
+  ggtitle(
+    "Top 5 Counties with the Greatest Number of Confirmed COVID-19 Cases",
+    subtitle = "The chart below represents the most impacted counties over the past 15 days and the number of cases over time.") +
+  theme_classic() +
+  theme(legend.position = "top",
+        panel.background = element_rect(fill = "#182F4E"),
+        plot.background = element_rect(fill = "#182F4E"),
+        axis.line = element_line(color = "white"),
+        axis.text = element_text(color = "white"),
+        axis.title = element_text(color = "white"),
+        legend.background = element_rect(fill = "#182F4E"),
+        legend.text = element_text(color = "white"),
+        legend.title = element_text(color = "white"),
+        title = element_text(color = "white"),
+        panel.grid.major.y = element_line(color = "white",
+                                          size = 0.25,
+                                          linetype = "dotted" ))
+```
+
+```{r}
+d %>%
+  filter(date >= "2020-04-26", date <= "2020-05-09") %>%
+  head()
+```
+
+
+```{r}
+d %>%
+  filter(date >= "2020-04-26", date <= "2020-05-09") %>%
+  ggplot(aes(x = date, y = case, group = county, fill = county)) +
+  geom_col() + 
+  scale_x_date(date_labels = "%d%b%Y",
+               date_breaks = "5 days") +
+  scale_fill_manual("County",
+                    values = c("#5854A8", "#46868E", "#958648", 
+                               "#8F5D37", "#5D98DB"),
+                    guide = guide_legend(title.position = "top",
+                                         title.hjust = 0.5)) + 
+  ggtitle(
+    "Top 5 Counties with the Greatest Number of Confirmed COVID-19 Cases",
+    subtitle = "The chart below represents the most impacted counties over the past 15 days and the number of cases over time.") +
+  theme_classic() +
+  theme(legend.position = "top", 
+        panel.background = element_rect(fill = "#182F4E"),
+        plot.background = element_rect(fill = "#182F4E"),
+        axis.line = element_line(color = "white"),
+        axis.text = element_text(color = "white"),
+        axis.title = element_text(color = "white"),
+        legend.background = element_rect(fill = "#182F4E"),
+        legend.text = element_text(color = "white"),
+        legend.title = element_text(color = "white"),
+        title = element_text(color = "white")) +
+  facet_grid(county~.)
+
+
+```
+
+
+
+```{r}
+d %>%
+  filter(date >= "2020-04-26", date <= "2020-05-09") %>%
+  ggplot(aes(x = date, y = county, fill = county, height = case)) +
+  geom_density_ridges(scale = 5, stat = "identity") + 
+  scale_x_date(date_labels = "%d%b%Y",
+               date_breaks = "5 days") +
+  scale_fill_manual("County",
+                    values = c("#5854A8", "#46868E", "#958648",
+                               "#8F5D37", "#5D98DB"),
+                    guide = guide_legend(title.position = "top",
+                                         title.hjust = 0.5)) + 
+  ggtitle(
+    "Top 5 Counties with the Greatest Number of Confirmed COVID-19 Cases",
+    subtitle = "The chart below represents the most impacted counties over the past 15 days and the number of cases over time.") +
+  theme_classic() +
+   theme(legend.position = "top", 
+        panel.background = element_rect(fill = "#182F4E"),
+        plot.background = element_rect(fill = "#182F4E"),
+        axis.line = element_line(color = "white"),
+        axis.text = element_text(color = "white"),
+        axis.title = element_text(color = "white"),
+        legend.background = element_rect(fill = "#182F4E"),
+        legend.text = element_text(color = "white"),
+        legend.title = element_text(color = "white"),
+        title = element_text(color = "white")) 
+```
+
+### LIne Plot
+```{r}
+d %>%
+  filter(date >= "2020-04-26", date <= "2020-05-09") %>%
+  ggplot(aes(x = date, y = case, color = county)) +
+  geom_line() + 
+  geom_point() +
+  scale_x_date(date_labels = "%d%b%Y",
+               date_breaks = "5 days") +
+  scale_color_manual("County",
+                     values = c("#5854A8", "#46868E", "#958648",
+                                "#8F5D37", "#5D98DB"),
+                     guide = guide_legend(title.position = "top",
+                                          title.hjust = 0.5)) + 
+  ggtitle(
+    "Top 5 Counties with the Greatest Number of Confirmed COVID-19 Cases",
+    subtitle = "The chart below represents the most impacted counties over the past 15 days and the number of cases over time.") +
+  theme_classic() +
+  theme(legend.position = "top",
+        panel.background = element_rect(fill = "#182F4E"),
+        plot.background = element_rect(fill = "#182F4E"),
+        axis.line = element_line(color = "white"),
+        axis.text = element_text(color = "white"),
+        axis.title = element_text(color = "white"),
+        legend.background = element_rect(fill = "#182F4E"),
+        legend.text = element_text(color = "white"),
+        legend.title = element_text(color = "white"),
+        title = element_text(color = "white"),
+        panel.grid.major.y = element_line(color = "white",
+                                          size = 0.25,
+                                          linetype = "dotted" ))
+```
+
+```{r}
+library(plotly)
+
+d %>%
+  filter(date >= "2020-04-26", date <= "2020-05-09") %>%
+  ggplot(aes(x = date, y = case, fill = county)) +
+  geom_col(position = "identity", alpha = 0.75) + 
+  scale_x_date(date_labels = "%d%b%Y",
+               date_breaks = "5 days") +
+  scale_fill_manual("County",
+                    values = c("#5854A8", "#46868E", "#958648",
+                               "#8F5D37", "#5D98DB"),
+                    guide = guide_legend(title.position = "top",
+                                         title.hjust = 0.5)) + 
+  ggtitle(
+    "Top 5 Counties with the Greatest Number of Confirmed COVID-19 Cases",
+    subtitle = "The chart below represents the most impacted counties over the past 15 days and the number of cases over time.") +
+  theme_classic() +
+  theme(legend.position = "top", 
+        panel.background = element_rect(fill = "#182F4E"),
+        plot.background = element_rect(fill = "#182F4E"),
+        axis.line = element_line(color = "white"),
+        axis.text = element_text(color = "white"),
+        axis.title = element_text(color = "white"),
+        legend.background = element_rect(fill = "#182F4E"),
+        legend.text = element_text(color = "white"),
+        legend.title = element_text(color = "white"),
+        title = element_text(color = "white")) -> p
+
+ggplotly(p)
+```
+
+
+# Grouped Bar Chart Plotly
+https://stackoverflow.com/questions/59350468/grouped-bar-chart-plotly
+```{r}
+
+library(plotly)
+library(tidyverse)
+
+data <- data.frame(Year = 2013:2019, 
+                   No_Qualification = c(561,575,579, 627, 682, 674, 707), 
+                   Lower_secondary_school_qualification = c(678, 690, 686, 759, 710, 770, 798), 
+                   Upper_secondary_school_qualification = c(626, 605, 645, 688, 722, 761, 805), 
+                   Level_1_3_post_school_certificate = c(631, 651, 657, 660, 672, 703, 762),
+                   Level_4_6_certificate_or_diploma = c(753, 780, 763, 848, 844, 815, 863), 
+                   Bachelors_degree = c(980,1006,1028, 1077, 1091, 1125, 1151), 
+                   Postgraduate_qualification = c(1178, 1245, 1244, 1331, 1399, 1385, 1474))
+
+head(data, 2)
+```
+
+```{r}
+data %>%
+  plot_ly(x = ~Year, y = ~No_Qualification, type = 'bar', 
+          name = 'No_Qualification') %>%
+  add_trace(y = ~Lower_secondary_school_qualification, 
+              name = 'Lower_secondary_school_qualification') %>%
+  add_trace(y = ~Upper_secondary_school_qualification,
+              name = 'Upper_secondary_school_qualification') %>%
+  add_trace(y = ~Level_1_3_post_school_certificate, 
+              name = 'Level_1_3_post_school_certificate') %>%
+  add_trace(y = ~Level_4_6_certificate_or_diploma, 
+              name = 'Level_4_6_certificate_or_diploma') %>%
+  add_trace(y = ~Bachelors_degree, 
+              name = 'Bachelors_degree') %>%
+  add_trace(y = ~Postgraduate_qualification,
+              name = 'Postgraduate_qualification') %>%
+  layout(yaxis = list(title = 'Count'), barmode = 'group')
+```
+
+# Plotly in R: How to make ggplot2 charts interactive with ggplotly
+https://www.musgraveanalytics.com/blog/2018/8/24/how-to-make-ggplot2-charts-interactive-with-plotly
+```{r}
+library(scales)
+
+df <- data.frame(Date= c(2001, 2001, 2002, 2002, 2003,2003,2004,2004), 
+                   Revenue = c(980,1006,1028, 1077, 1091, 1125, 1151,2000), 
+                   Target =  c(1178, 1245, 1244, 1331, 1399, 1385, 1474, 1500))
+
+p <- ggplot(data = df,
+            aes(x = Date, 
+                y = Revenue/100,
+                group = 1, 
+                text = paste0("Date: ", Date,
+                              "<br>Revenue: $", round(Revenue/100, digits = 1), "million",
+                              "<br>Target: $", round(Target/100, digits = 1), "million")))+
+  scale_y_continuous(labels= scales::dollar_format(prefix="$",suffix=" m"))+
+  geom_line(colour = "grey", aes(Date, Target/100)) +
+  geom_line(colour = "#408FA6") +
+  ylab("Revenue")
+
+ggplotly(p, tooltip = "text")
+```
+
+https://stackoverflow.com/questions/34573791/format-hover-text-to-in-stacked-area-plot-r-plot-ly
+```{r}
+library(plotly)
+
+season <- c('Winter', 'Spring', 'Summer', 'Fall')
+y1_real<- c(40, 80, 95, 10)
+y2_real<- c(20, 55, 10, 10)
+y3_real<- c(40, 10, 60, 180)
+
+df= data.frame(season, y1_real, y2_real, y3_real)
+
+df$y1_reald <- paste(y1_real, "$", sep="")
+df$y2_reald <- paste(y2_real, "$", sep="")
+df$y3_reald <- paste(y3_real, "$", sep="")
+
+p1<- plot_ly(df, x=season, y=y1_real, text=df$y1_reald, hoverinfo='x+text+name', name="Blue", fill="tonexty")
+p2<- add_trace(p1, x=season, y=y2_real, text=df$y2_reald, hoverinfo='x+text+name', name="Orange", fill="tonexty")
+p3<- add_trace(p2, x=season, y=y3_real, text=df$y3_reald, hoverinfo='x+text+name', name="Green", fill="tonexty")
+
+p3
+
+#p4<- layout(yaxis=list(showgrid=FALSE, showline=FALSE, hoverformat="$,f"))
+#p4 
+```
+
+
+
+# Style Graphs in ggplot2
+http://austinclemens.com/blog/2014/07/03/fivethirtyeight-com-style-graphs-in-ggplot2/
+```{r}
+library(ggplot2)
+library(grid)
+
+line1 = rnorm(100, mean = 15-seq(1, 6, by = .05), sd = 1)
+line2 = rnorm(100, mean = 4+seq(1, 21, by=.2), sd=.5)
+time = seq(1,100, by = 1)
+data = data.frame(time, line1, line2)
+
+head(data, 2)
+```
+
+```{r}
+ggplot(data, aes(time)) +
+  # The actual line
+  geom_line(aes(y=line1), size = 1.6 ,colour="#f8766d") +
+  geom_line(aes(y = line2), size = 1.6, colour="#00bdc4") +
+  theme_bw() +
+  # Set the entire chart region to a light gray col
+  theme(panel.background = element_rect("#F0F0F0")) +
+  theme(plot.background = element_rect("#F0F0F0")) +
+  theme(panel.border = element_rect(colour = '#F0F0F0')) +
+  # format the grid
+  theme(panel.grid.major = element_line(colour = '#D0D0D0', size = .75)) +
+  scale_x_continuous(minor_breaks = 0, breaks = seq(0,100,10)) +
+  scale_y_continuous(minor_breaks = 0, breaks = seq(0,26,4), limits = c(0,26)) +
+  theme(axis.ticks = element_blank()) +
+  # Dispose of the legend
+  theme(legend.position = "none") +
+  # Set title and axis labels, and format these and tick marks
+  ggtitle("Some Random Data I Made") +
+  theme(plot.title=element_text(face="bold",hjust=-.08,vjust=1,colour="#3C3C3C",size=20)) +
+  ylab("Data Label") +
+  xlab("Days Since Beginning") +
+  theme(axis.text.x=element_text(size=11,colour="#535353",face="bold")) +
+  theme(axis.text.y=element_text(size=11,colour="#535353",face="bold")) +
+  theme(axis.title.y=element_text(size=11,colour="#535353",face="bold",vjust=1.5)) +
+  theme(axis.title.x=element_text(size=11,colour="#535353",face="bold",vjust=-.5)) +
+  # Big bold line at y=0
+  geom_hline(yintercept=0,size=1.2,colour="#535353") +
+  # Plot margins and finally line annotations
+  theme(plot.margin = unit(c(1, 1, .5, .7), "cm")) +
+  annotate("text",x=14.7,y=16.3,label="Line 1",colour="#f8766d") +
+  annotate("text",x=25,y=7.5,label="Line 2",colour="#00bdc4")
+ 
+#ggsave(filename="/538.png",dpi=600)
+
+```
+
+# ANOTHER WAY TO PRESENT LINE GRAPH
+reference: https://jiwanheo.rbind.io/blog/2020-01-11-another-way-to-present-line-graph/
+```{r}
+library(tidyverse)
+
+txhousing %>% head(2)
+```
+
+```{r}
+txhousing %>%
+  ggplot(aes(date, median, color = city)) +
+  geom_line() +
+  scale_y_continuous(labels = scales::dollar_format()) +
+  theme_light() +
+  theme(legend.position = "none") +
+  labs(title = "How did housing prices of Texas change over the years?",
+       x = "Year", 
+       y = "Median price") 
+
+```
+
+```{r}
+tx <- highlight_key(txhousing, ~city)
+plot_ly(tx, color = ~city) %>% 
+  group_by(city) %>% 
+  add_lines(x = ~date, y = ~median) %>% 
+  layout(title = "How did housing prices of Texas change over the years?",
+         subtitle = "Double-click me!",
+         xaxis = list(title = "Year"),
+         yaxis = list(title = "Median price"))
+```
+
+`highligh_key` declars `city` variables as a "look up" values. What thjis means is you can look up a city in the whole dataset, which effectively isolates the chosen city.
+
+```{r}
+library(data.table)
+
+tx_df <- as.data.table(txhousing)
+
+start <- tx_df[tx_df[, .I[date == min(date)], by = city]$V1]
+end <- tx_df[tx_df[, .I[date == max(date)], by = city]$V1]
+
+# now we'll stack them and only select data we need 
+stacked <- start %>%
+              rbind(end) %>%
+              select(city, median, date) %>%
+              arrange(city)
+
+
+stacked <- 
+      stacked %>%
+         spread(date , median) %>%
+         rename(start  = `2000`, end = `2015.5`) %>%
+         filter(!is.na(start) & !is.na(end))
+
+stacked %>% 
+  head()
+
+```
+
+```{r}
+
+stacked <- 
+  stacked %>%
+    mutate(avg = (start + end)/2) %>%
+    mutate(city = fct_reorder(city, avg))          
+
+stacked %>%
+  ggplot() +
+  geom_segment(aes(x = city, xend = city, y = start, yend = end),
+               arrow = arrow(type = "closed", length = unit(0.12, "inches"))) +
+  geom_point(aes(city, start), colour = "red", size = 4) +
+  geom_point(aes(city, end), colour = "green", size = 4) +
+  geom_hline(yintercept = as.numeric(stacked %>% summarize(mean(start))), color = "red", linetype = "dashed") +
+  geom_hline(yintercept = as.numeric(stacked %>% summarize(mean(end))), color = "green", linetype = "dashed") +
+  geom_text(data = stacked %>% filter(city == "Irving"),
+            aes(city, start, label = "Year 2000", hjust = 1.2)) +
+   geom_text(data = stacked %>% filter(city == "Irving"),
+            aes(city, end, label = "Year 2015", hjust = -0.2)) +
+  scale_y_continuous(labels = scales::dollar_format()) +
+  coord_flip() +
+  labs(title = "How did housing prices of Texas change over the years?",
+       x = "City",
+       y = "Median price") +
+  theme_bw()
+```
+
+```{r}
+ggplotly(stacked %>% 
+  ggplot() +
+  geom_segment(aes(x = city, xend = city, y = start, yend = end),
+               arrow=arrow(type = "closed", length = unit(0.15, "inches"))) +
+  geom_point(aes(city, start), color = "red", size = 4) +
+  geom_point(aes(city, end), color = "green", size = 4) +
+  geom_hline(yintercept = as.numeric(stacked %>% summarize(mean(start))), color = "red", linetype = "dashed") +
+  geom_hline(yintercept = as.numeric(stacked %>% summarize(mean(end))), color = "green", linetype = "dashed") +
+  geom_text(data = stacked %>% filter(city == "Irving"),
+            aes(city, start, label = "Year 2000", hjust = 0)) +
+  geom_text(data = stacked %>% filter(city == "Irving"),
+            aes(city, end, label = "Year 2015", hjust = 0)) +
+  scale_y_continuous(labels = scales::dollar_format()) +
+  coord_flip() +
+  labs(title = "How did housing prices of Texas change over the years?",
+       x = "City",
+       y = "Median price") +
+    theme_light())
 ```
 
