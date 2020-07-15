@@ -181,3 +181,56 @@ df %>%
 df$x[is.na(df$x)] <- 0
 ```
 
+
+# How does one reorder columns in a data frame?
+reference: https://stackoverflow.com/questions/5620885/how-does-one-reorder-columns-in-a-data-frame
+
+```{r}
+data  = mtcars
+data %>% head()
+```
+
+```{r}
+data %>%
+  select(mpg:disp, hp, wt, gear:qsec, starts_with('carb')) %>% 
+  head()
+```
+
+## Error in data.frame , unused argument
+```{r}
+# https://stackoverflow.com/questions/48714625/error-in-data-frame-unused-argument
+library(dplyr)
+
+# Create data frame
+
+merged.tables <- 
+  data.frame(
+    Store = c(1, 1, 1, 2, 2, 2),
+    StoreType = rep(x = c("s", "m","l"), times = 2),
+    Sales = round(x = runif(n = 6, min = 3000, max = 6000), digits = 0),
+    Open = c(1, 1, 0, 0, 1, 1),
+    stringsAsFactors = FALSE    
+  )
+
+merged.tables %>%
+  group_by(StoreType) %>%
+  filter( Open == 1) %>%
+  # https://stackoverflow.com/questions/62140483/how-to-interpret-dplyr-message-summarise-regrouping-output-by-x-override
+  summarise(AverageSales = mean(x = Sales, na.rm = TRUE), .groups = 'drop')
+```
+
+```{r}
+# tapplr method 
+
+# create the codition
+# that 'Open' must be equal to one 
+Open.equals.one = which( merged.tables$Open == 1)
+
+# apply the coditions to
+# both X and INDEX
+tapply( X = merged.tables$Sales[Open.equals.one],
+        INDEX = merged.tables$StoreType[Open.equals.one],
+        FUN = mean,
+        na.rm = TRUE)
+```
+

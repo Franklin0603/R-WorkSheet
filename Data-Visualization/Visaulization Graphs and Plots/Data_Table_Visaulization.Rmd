@@ -826,3 +826,166 @@ ggplotly(stacked %>%
     theme_light())
 ```
 
+# Shuttering Pies With Retiring Stores
+reference: https://rud.is/b/2017/04/21/shuttering-pies-with-retiring-stores/
+
+```{r}
+library(hrbrthemes)
+library(tidyverse)
+library(ggplot2)
+
+data = read.table(text='store,closing,total
+"Radio Shack",550,1500
+"Payless",400,2600
+"Rue21",400,1100
+"The Limited",250,250
+"bebe",180,180
+"Wet Seal",170,170
+"Crocs",160,560
+"JCPenny",138,1000
+"American Apparel",110,110
+"Kmart",109,735
+"hhgregg",88,220
+"Sears",41,695', sep=",", header=TRUE, stringsAsFactors=FALSE)
+
+head(data,3)
+```
+
+```{r}
+closing_df <-
+  data %>%
+    as_tibble() %>%
+    mutate(remaining = total - closing,
+           gone = round((closing/total)*100)/100,
+           stay = 1-gone,
+           rem_lab = ifelse(remaining == 0, "", scales::comma(remaining))) %>%
+    arrange(desc(stay)) %>%
+    mutate(store = factor(store, levels = store))
+
+head(closing_df,3)
+```
+
+```{r}
+ggplot(closing_df) +
+  geom_segment(aes(0, store, xend = gone, yend = store, color = "closing"), size = 8) +
+  geom_segment(aes(gone, store, xend = gone + stay ,
+                   yend = store, color = "Remaining"), size = 8) +
+  geom_text(aes(x = 0, y = store, label = closing), color = "white", hjust = 0, nudge_x = 0.01) +
+  geom_text(aes(x = 1, y = store, label = rem_lab), color = "white", hjust = 1.5, nudge_x = 0.012) +
+  #  scale_x_percent()
+  # scale_color_ip
+  # scale_color_ipsum(name=NULL) +
+  labs(x=NULL, y=NULL, 
+       title="Selected 2017 Store closings (estimated)",
+       subtitle="Smaller specialty chains such as Bebe and American Apparel are closing their stores,\nwhile lareger chains such as J.C. Penny and Sears are scaling back their footprint.\n") +
+  #theme_ipsum_rc(grid="X") +
+  theme(axis.text.x=element_text(hjust=c(0, 0.5, 0.5, 0.5, 1))) +
+  theme(legend.position=c(0.875, 1.025)) +
+  theme(legend.direction="horizontal")
+```
+
+# Creating beautiful demographic maps in R with the tidycensus and tmap packages
+
+reference: http://zevross.com/blog/2018/10/02/creating-beautiful-demographic-maps-in-r-with-the-tidycensus-and-tmap-packages/#part-1-using-tidycensus-to-collect-us-census-data
+
+
+# (ggplot2) Exercising with (ggalt) dumbbells
+
+reference: https://rud.is/b/2016/04/17/ggplot2-exercising-with-ggalt-dumbbells/
+
+```{r}
+
+library(ggplot2) # devtools::install_github("hadley/ggplot2")
+library(ggalt)   # devtools::install_github("hrbrmstr/ggalt")
+library(dplyr)   # for data_frame() & arrange()
+
+# I'm not crazy enough to input all the data; this will have to do for the example
+df <- data_frame(country=c("Germany", "France", "Vietnam", "Japan", "Poland", "Lebanon",
+                           "Australia", "South\nKorea", "Canada", "Spain", "Italy", "Peru",
+                           "U.S.", "UK", "Mexico", "Chile", "China", "India"),
+                 ages_35=c(0.39, 0.42, 0.49, 0.43, 0.51, 0.57,
+                           0.60, 0.45, 0.65, 0.57, 0.57, 0.65,
+                           0.63, 0.59, 0.67, 0.75, 0.52, 0.48),
+                 ages_18_to_34=c(0.81, 0.83, 0.86, 0.78, 0.86, 0.90,
+                                 0.91, 0.75, 0.93, 0.85, 0.83, 0.91,
+                                 0.89, 0.84, 0.90, 0.96, 0.73, 0.69),
+                 diff=sprintf("+%d", as.integer((ages_18_to_34-ages_35)*100)))
+
+head(df)
+```
+
+```{r}
+# we want to keep the prder in the plot, so we use a factor for country
+df <- arrange(df, desc(diff))
+df$country <- factor(df$country, levels = rev(df$country))
+
+# We only want first line values with "%" symbols (to avoid chart junk)
+# Quick back; there is a more efficient way to do this
+
+head(df)
+```
+
+```{r}
+# we only want the first line values with '$' symbols (to avoid chart junk)
+# quick hack, there is a more efficient way to do this
+percent_first <- function(x){
+   x <- sprintf("%d%%", round(x*100))
+   x[2:length(x)] <- sub("%$","", x[2:length(x)])
+   x
+}
+```
+
+```{r}
+gg <- ggplot()
+# doing this vs y axis major grid line
+gg <- gg + geom_segment(data = df, aes(y=country,yend=country, x=0, xend=1),color="#b2b2b2", size=0.15)
+
+# dumbbell visualization
+gg <- gg + geom_dumbbell(data=df, aes(y=country, x=ages_35, xend=ages_18_to_34),
+                         size=1.5, color="#b2b2b2", point.size.l=3, point.size.r=3,
+                         point.colour.l="#9fb059", point.colour.r="#edae52")
+
+# text below points
+gg <- gg + geom_text(data=filter(df, country=="Germany"),
+                     aes(x=ages_35, y=country, label="Ages 35+"),
+                     color="#9fb059", size=3, vjust=-2, fontface="bold", family="Calibri")
+
+gg <- gg + geom_text(data=filter(df, country=="Germany"),
+                     aes(x=ages_18_to_34, y=country, label="Ages 18-34"),
+                     color="#edae52", size=3, vjust=-2, fontface="bold", family="Calibri")
+
+# text above points
+gg <- gg + geom_text(data=df, aes(x=ages_35, y=country, label=percent_first(ages_35)),
+                     color="#9fb059", size=2.75, vjust=2.5, family="Calibri")
+gg <- gg + geom_text(data=df, color="#edae52", size=2.75, vjust=2.5, family="Calibri",
+                     aes(x=ages_18_to_34, y=country, label=percent_first(ages_18_to_34)))
+
+# difference column
+#gg <- gg + geom_rect(data=df, aes(xmin=1.05, xmax=1.175, ymin=-Inf, ymax=Inf), fill="#efefe3")
+gg <- gg + geom_text(data=df, aes(label=diff, y=country, x=1.1125), fontface="bold", size=3, family="Calibri")
+gg <- gg + geom_text(data=filter(df, country=="Germany"), aes(x=1.1125, y=country, label="DIFF"),
+                     color="#7a7d7e", size=3.1, vjust=-2, fontface="bold", family="Calibri")
+gg <- gg + scale_x_continuous(expand=c(0,0), limits=c(0, 1.175))
+gg <- gg + scale_y_discrete(expand=c(0.075,0))
+gg <- gg + labs(x=NULL, y=NULL, title="The social media age gap",
+                subtitle="Adult internet users or reported smartphone owners who\nuse social networking sites",
+                caption="Source: Pew Research Center, Spring 2015 Global Attitudes Survey. Q74")
+
+# gg <- gg + theme_bw(base_family="Calibri")
+# gg <- gg + theme(panel.grid.major=element_blank())
+# gg <- gg + theme(panel.grid.minor=element_blank())
+# gg <- gg + theme(panel.border=element_blank())
+# gg <- gg + theme(axis.ticks=element_blank())
+# gg <- gg + theme(axis.text.x=element_blank())
+# gg <- gg + theme(plot.title=element_text(face="bold"))
+# gg <- gg + theme(plot.subtitle=element_text(face="italic", size=9, margin=margin(b=12)))
+# gg <- gg + theme(plot.caption=element_text(size=7, margin=margin(t=12), color="#7a7d7e"))
+
+gg
+```
+
+
+
+
+
+
